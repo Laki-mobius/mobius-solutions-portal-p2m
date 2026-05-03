@@ -14,7 +14,131 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          email: string
+          id: string
+          session_id: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          email: string
+          id?: string
+          session_id: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          email?: string
+          id?: string
+          session_id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
+      collaterals: {
+        Row: {
+          created_at: string
+          file_url: string
+          id: string
+          linked_solution_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["collateral_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_url: string
+          id?: string
+          linked_solution_id?: string | null
+          title: string
+          type: Database["public"]["Enums"]["collateral_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string
+          id?: string
+          linked_solution_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["collateral_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaterals_linked_solution_id_fkey"
+            columns: ["linked_solution_id"]
+            isOneToOne: false
+            referencedRelation: "solutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solutions: {
+        Row: {
+          created_at: string
+          description: string
+          icon_url: string | null
+          id: string
+          solution_type: Database["public"]["Enums"]["solution_type"]
+          target_url: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          icon_url?: string | null
+          id?: string
+          solution_type: Database["public"]["Enums"]["solution_type"]
+          target_url: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon_url?: string | null
+          id?: string
+          solution_type?: Database["public"]["Enums"]["solution_type"]
+          target_url?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +147,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      collateral_type: "video" | "deck" | "document"
+      solution_type: "internal" | "external"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +275,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      collateral_type: ["video", "deck", "document"],
+      solution_type: ["internal", "external"],
+    },
   },
 } as const
