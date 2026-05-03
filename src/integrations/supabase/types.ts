@@ -80,26 +80,15 @@ export type Database = {
             referencedRelation: "solutions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "collaterals_linked_solution_id_fkey"
-            columns: ["linked_solution_id"]
-            isOneToOne: false
-            referencedRelation: "solutions_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       solutions: {
         Row: {
           created_at: string
-          credentials_note: string | null
-          default_password_encrypted: string | null
-          default_username: string | null
           description: string
           icon_url: string | null
           id: string
           solution_type: Database["public"]["Enums"]["solution_type"]
-          status: string
           target_url: string
           thumbnail_url: string | null
           title: string
@@ -107,14 +96,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          credentials_note?: string | null
-          default_password_encrypted?: string | null
-          default_username?: string | null
           description?: string
           icon_url?: string | null
           id?: string
           solution_type: Database["public"]["Enums"]["solution_type"]
-          status?: string
           target_url: string
           thumbnail_url?: string | null
           title: string
@@ -122,14 +107,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          credentials_note?: string | null
-          default_password_encrypted?: string | null
-          default_username?: string | null
           description?: string
           icon_url?: string | null
           id?: string
           solution_type?: Database["public"]["Enums"]["solution_type"]
-          status?: string
           target_url?: string
           thumbnail_url?: string | null
           title?: string
@@ -160,54 +141,7 @@ export type Database = {
       }
     }
     Views: {
-      solutions_public: {
-        Row: {
-          created_at: string | null
-          credentials_note: string | null
-          default_username: string | null
-          description: string | null
-          has_credentials: boolean | null
-          icon_url: string | null
-          id: string | null
-          solution_type: Database["public"]["Enums"]["solution_type"] | null
-          status: string | null
-          target_url: string | null
-          thumbnail_url: string | null
-          title: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          credentials_note?: string | null
-          default_username?: string | null
-          description?: string | null
-          has_credentials?: never
-          icon_url?: string | null
-          id?: string | null
-          solution_type?: Database["public"]["Enums"]["solution_type"] | null
-          status?: string | null
-          target_url?: string | null
-          thumbnail_url?: string | null
-          title?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          credentials_note?: string | null
-          default_username?: string | null
-          description?: string | null
-          has_credentials?: never
-          icon_url?: string | null
-          id?: string | null
-          solution_type?: Database["public"]["Enums"]["solution_type"] | null
-          status?: string | null
-          target_url?: string | null
-          thumbnail_url?: string | null
-          title?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never

@@ -1,71 +1,144 @@
-## Option A (Hardened) — Default credentials + "Upcoming" flag
 
-### 1. Database changes (`solutions` table)
+# Solutions Showcase Portal — Implementation Plan
 
-Add four columns:
+A public portal for Mobius Knowledge Services to showcase Solutions and Collaterals. Browsing is open; every click-through is gated by an official-email popup and logged for analytics. Admin panel is unprotected with a clear warning banner.
 
-- `default_username` text, nullable
-- `default_password_encrypted` text, nullable — encrypted at rest using `pgcrypto` + a server-only secret (`CREDS_ENCRYPTION_KEY`)
-- `credentials_note` text, nullable — free-text hint (e.g. "SSO via Okta", "Ask IT for access")
-- `status` text, default `'live'`, check in (`'live'`, `'upcoming'`)
+Stack: existing project stack — React 18 + Vite + Tailwind v3 + shadcn/ui. Backend on **Lovable Cloud (Supabase)** for DB, Storage, and Edge Functions.
 
-Tighten RLS on `solutions`:
+---
 
-- Public SELECT continues to work, but the `default_password_encrypted` column is **excluded** from the public-readable view. We expose a view `public.solutions_public` that omits the encrypted password, and restrict the base table SELECT to service role only.
-- This prevents anyone from sniffing encrypted blobs from the public API.
+## Pages & Navigation
 
-Add a new secret `CREDS_ENCRYPTION_KEY` (random 32-byte value).
+| Route | Purpose |
+|---|---|
+| `/` | Hero + tabbed Solutions (Internal / External) + featured collaterals |
+| `/solutions` | Full Solutions grid with type tabs and search |
+| `/collaterals` | Collaterals grid with type filter chips (All / Video / Deck / Document) |
+| `/search?q=` | Unified search across solutions + collaterals |
+| `/admin` | Open admin (warning banner, no auth) |
 
-### 2. Edge functions
+Header: Mobius placeholder mark + wordmark, nav links, "Switch email" link (visible once an email is cached).
 
-- `reveal-credentials` — accepts `{ solution_id, email, session_id }`, validates email against the same allowlist (`@mobiusservices.com`), decrypts the password using `CREDS_ENCRYPTION_KEY`, logs a `reveal_credentials` row in `activity_logs`, and returns `{ username, password, note }`. Rate-limited (max ~10 reveals per email per hour) to prevent scraping.
-- `admin-mutate-solution` — used by the admin panel to insert/update solutions; encrypts the password server-side before writing. Replaces the current direct `supabase.from("solutions").insert()` calls in `AdminSolutions.tsx` so the plaintext password never touches the public API.
+---
 
-### 3. UI changes
+## Email Gate
 
-**SolutionCard**
-- New `"Upcoming"` badge (amber gradient) shown when `status === 'upcoming'`. Card becomes non-clickable (no email gate, no redirect) and shows "Coming soon" instead of the open-link arrow.
-- For `live` solutions with credentials, after the email gate succeeds the card opens the target URL **and** a small "Credentials" toast appears with a "Show credentials" button → opens a dialog.
+- Modal triggered by any Solution card click or Collateral action (View / Play / Download).
+- Validates format + domain allowlist `@mobiusservices.com` (configurable in `src/lib/email-gate.ts`).
+- Inline error: "Please use your official @mobiusservices.com email".
+- On success: persist `email` + generated `session_id` to `localStorage`; one popup per browser session.
+- Every gated click is logged even when the email is cached.
+- "Switch email" header link clears stored email + session.
 
-**Credentials dialog**
-- Calls `reveal-credentials` edge function.
-- Displays `username` and `password` in monospace fields with a copy-to-clipboard button each.
-- Shows the optional `credentials_note` below.
-- Password is masked by default with a show/hide toggle.
-- Auto-clears from memory when the dialog closes.
+---
 
-**Admin → Solutions form**
-- New fields: Status (Live / Upcoming), Default username, Default password, Credentials note.
-- Password field is write-only (never pre-filled when editing — shows "Leave blank to keep existing").
-- Save calls `admin-mutate-solution` instead of writing directly.
+## Solutions
 
-**Admin → Logs**
-- New action type `reveal_credentials` shown in the logs table and CSV export.
+- Card: 16:10 thumbnail, optional icon, title, description, type badge (Internal / External, distinct gradients).
+- Hover-lift, glass badges, generous whitespace.
+- Click → email gate → log `view_solution` → open `target_url` in new tab.
 
-### 4. "New" vs "Upcoming" badge logic
+Admin fields: title, description, solution_type, icon (upload or URL), thumbnail (upload or URL), target_url.
 
-| Status   | Created < 30 days ago | Badge shown        | Clickable |
-|----------|-----------------------|--------------------|-----------|
-| live     | yes                   | New (purple)       | yes       |
-| live     | no                    | none               | yes       |
-| upcoming | any                   | Upcoming (amber)   | no        |
+---
 
-### Technical notes
+## Collaterals
 
-- Encryption uses `pgcrypto`'s `pgp_sym_encrypt` / `pgp_sym_decrypt` inside the edge functions (key never sent to the browser).
-- The `solutions_public` view is what the existing `useSolutions` hook will query — column shape stays compatible (id, title, description, icon_url, thumbnail_url, target_url, solution_type, created_at, status, has_credentials boolean, credentials_note).
-- `has_credentials` is a computed boolean (`default_password_encrypted IS NOT NULL`) so the UI knows whether to show the "Credentials" button without exposing anything sensitive.
-- Existing data is unaffected — all new columns are nullable and `status` defaults to `'live'`.
+- Color-coded badges per type (Video / Deck / Document).
+- Filter chips with counts.
+- Actions:
+  - Video → Play (logs `play_video`)
+  - Deck / Document → View + Download (logs `view_collateral` / `download_collateral`)
+- Optional link to a parent Solution (chip on the card).
 
-### Files touched
+Admin fields: title, type, file (upload or URL), linked_solution_id.
 
-- New migration (columns, view, RLS tightening, pgcrypto)
-- New secret: `CREDS_ENCRYPTION_KEY`
-- New: `supabase/functions/reveal-credentials/index.ts`
-- New: `supabase/functions/admin-mutate-solution/index.ts`
-- New: `src/components/CredentialsDialog.tsx`
-- Edited: `src/components/SolutionCard.tsx` (Upcoming badge, credentials trigger)
-- Edited: `src/components/admin/AdminSolutions.tsx` (new fields, calls edge function)
-- Edited: `src/hooks/useContent.ts` (query the view, add `status` + `has_credentials` + `credentials_note`)
-- Edited: `src/lib/tracking.ts` (add `reveal_credentials` action type)
-- Edited: `src/components/admin/AdminLogs.tsx` (display new action)
+---
+
+## Admin Panel (`/admin`)
+
+- Prominent red warning banner: "Unprotected admin — do not share this URL".
+- Tabs:
+  - **Solutions** — table + add/edit dialog.
+  - **Collaterals** — table + add/edit dialog with solution selector.
+  - **Logs** — latest 100 entries (email, action, target, timestamp) + "Export full CSV".
+
+---
+
+## Tracking
+
+Every gated action inserts into `activity_logs`:
+`email`, `session_id`, `action`, `target_id`, `target_type`, `created_at`.
+
+Actions: `view_solution`, `view_collateral`, `play_video`, `download_collateral`.
+
+---
+
+## Design System
+
+- Brand: placeholder Mobius mark (geometric monogram) + wordmark.
+- HSL semantic tokens in `index.css`: deep indigo primary, violet accent, soft neutrals; distinct gradient tokens for Internal vs External.
+- Modern aesthetic: gradient hero, glass badges, subtle hover-lift, rounded-2xl, ample whitespace.
+- Mobile-first responsive; collapsible nav.
+- All colors via tokens — no hard-coded Tailwind color names in components.
+
+---
+
+## Data Model (Supabase)
+
+```text
+solutions
+  id uuid pk, title text, description text,
+  icon_url text, thumbnail_url text, target_url text,
+  solution_type text check in ('internal','external'),
+  created_at timestamptz
+
+collaterals
+  id uuid pk, title text,
+  type text check in ('video','deck','document'),
+  file_url text, linked_solution_id uuid null fk solutions,
+  created_at timestamptz
+
+user_sessions
+  id uuid pk, email text, session_id text unique, created_at timestamptz
+
+activity_logs
+  id uuid pk, email text, session_id text,
+  action text, target_id uuid, target_type text,
+  created_at timestamptz
+```
+
+RLS:
+- `solutions`, `collaterals`: public SELECT.
+- `user_sessions`, `activity_logs`: public INSERT only (no public SELECT — emails are PII).
+- Admin reads of logs and all admin writes happen via Edge Functions using the service role (since `/admin` is intentionally unauthenticated; the warning banner makes that explicit).
+
+Storage: public bucket `portal-files` for icons, thumbnails, collateral files. Admin uploads via Edge Function.
+
+---
+
+## Edge Functions
+
+- `admin-mutate` — create/update/delete solutions & collaterals + uploads to `portal-files`.
+- `admin-read` — list activity logs, export CSV.
+
+---
+
+## Build Order
+
+1. Design tokens, header/footer, placeholder Mobius mark.
+2. Supabase schema + RLS + storage bucket + edge functions.
+3. Email gate modal, `email-gate.ts` allowlist, logging helper.
+4. Home with Internal/External tabs.
+5. Solutions and Collaterals listing pages with filters.
+6. Global `/search`.
+7. Admin panel (Solutions, Collaterals, Logs + CSV export).
+8. Polish: responsive pass, empty states, loading skeletons.
+
+---
+
+## Defaults Applied
+
+- Allowed domain: `@mobiusservices.com` (single constant, easy to change).
+- Admin: fully open with red warning banner.
+- Branding: placeholder Mobius mark + wordmark in indigo/violet.

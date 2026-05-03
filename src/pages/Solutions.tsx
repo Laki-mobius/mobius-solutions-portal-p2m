@@ -28,7 +28,7 @@ const Solutions = () => {
         <div className="container py-12">
           <h1 className="font-display text-4xl font-bold">Solutions</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">
-            Every solution our team has built — internal tools and external market facing solutions.
+            Every solution our team has built — internal tooling and external client work.
           </p>
         </div>
       </section>
