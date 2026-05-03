@@ -1,1 +1,7 @@
 project_id = "zyxafoayehakvsniwrdh"
+
+[functions.manage-solution]
+verify_jwt = false
+
+[functions.reveal-credentials]
+verify_jwt = false
