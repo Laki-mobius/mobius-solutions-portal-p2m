@@ -17,6 +17,8 @@ export const SolutionCard = ({ solution }: { solution: Solution }) => {
   };
 
   const isInternal = solution.solution_type === "internal";
+  const isNew =
+    Date.now() - new Date(solution.created_at).getTime() < 30 * 24 * 60 * 60 * 1000;
 
   return (
     <button
