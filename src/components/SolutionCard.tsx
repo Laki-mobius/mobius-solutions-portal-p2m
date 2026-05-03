@@ -42,7 +42,7 @@ export const SolutionCard = ({ solution }: { solution: Solution }) => {
             <Sparkles className="h-10 w-10 text-primary-foreground/80" />
           </div>
         )}
-        <div className="absolute left-3 top-3">
+        <div className="absolute left-3 top-3 flex items-center gap-1.5">
           <span
             className={`glass inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
               isInternal ? "text-[hsl(var(--internal-from))]" : "text-[hsl(var(--external-from))]"
@@ -50,6 +50,11 @@ export const SolutionCard = ({ solution }: { solution: Solution }) => {
           >
             {isInternal ? "Internal" : "External"}
           </span>
+          {isNew && (
+            <span className="inline-flex items-center rounded-full bg-gradient-brand px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-glow">
+              New
+            </span>
+          )}
         </div>
         <div className="absolute right-3 top-3 rounded-full bg-foreground/90 p-2 text-background opacity-0 transition-opacity group-hover:opacity-100">
           <ArrowUpRight className="h-4 w-4" />
