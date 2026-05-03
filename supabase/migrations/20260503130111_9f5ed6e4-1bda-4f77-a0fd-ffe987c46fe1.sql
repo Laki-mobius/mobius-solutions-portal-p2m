@@ -1,0 +1,1 @@
+CREATE POLICY "solutions admin read" ON public.solutions FOR SELECT USING (true);
