@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _app_secrets: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           action: string
@@ -89,6 +104,45 @@ export type Database = {
           },
         ]
       }
+      credential_reveals: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          session_id: string
+          solution_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          session_id: string
+          solution_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          session_id?: string
+          solution_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credential_reveals_solution_id_fkey"
+            columns: ["solution_id"]
+            isOneToOne: false
+            referencedRelation: "solutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credential_reveals_solution_id_fkey"
+            columns: ["solution_id"]
+            isOneToOne: false
+            referencedRelation: "solutions_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       solutions: {
         Row: {
           created_at: string
@@ -99,10 +153,11 @@ export type Database = {
           icon_url: string | null
           id: string
           solution_type: Database["public"]["Enums"]["solution_type"]
-          status: string
+          status: Database["public"]["Enums"]["solution_status"]
           target_url: string
           thumbnail_url: string | null
           title: string
+          upcoming_eta: string | null
           updated_at: string
         }
         Insert: {
@@ -114,10 +169,11 @@ export type Database = {
           icon_url?: string | null
           id?: string
           solution_type: Database["public"]["Enums"]["solution_type"]
-          status?: string
+          status?: Database["public"]["Enums"]["solution_status"]
           target_url: string
           thumbnail_url?: string | null
           title: string
+          upcoming_eta?: string | null
           updated_at?: string
         }
         Update: {
@@ -129,10 +185,11 @@ export type Database = {
           icon_url?: string | null
           id?: string
           solution_type?: Database["public"]["Enums"]["solution_type"]
-          status?: string
+          status?: Database["public"]["Enums"]["solution_status"]
           target_url?: string
           thumbnail_url?: string | null
           title?: string
+          upcoming_eta?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -170,10 +227,11 @@ export type Database = {
           icon_url: string | null
           id: string | null
           solution_type: Database["public"]["Enums"]["solution_type"] | null
-          status: string | null
+          status: Database["public"]["Enums"]["solution_status"] | null
           target_url: string | null
           thumbnail_url: string | null
           title: string | null
+          upcoming_eta: string | null
           updated_at: string | null
         }
         Insert: {
@@ -185,10 +243,11 @@ export type Database = {
           icon_url?: string | null
           id?: string | null
           solution_type?: Database["public"]["Enums"]["solution_type"] | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["solution_status"] | null
           target_url?: string | null
           thumbnail_url?: string | null
           title?: string | null
+          upcoming_eta?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -200,20 +259,24 @@ export type Database = {
           icon_url?: string | null
           id?: string | null
           solution_type?: Database["public"]["Enums"]["solution_type"] | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["solution_status"] | null
           target_url?: string | null
           thumbnail_url?: string | null
           title?: string | null
+          upcoming_eta?: string | null
           updated_at?: string | null
         }
         Relationships: []
       }
     }
     Functions: {
-      [_ in never]: never
+      decrypt_credential: { Args: { _ciphertext: string }; Returns: string }
+      encrypt_credential: { Args: { _plaintext: string }; Returns: string }
+      set_credentials_key: { Args: { _key: string }; Returns: undefined }
     }
     Enums: {
       collateral_type: "video" | "deck" | "document"
+      solution_status: "live" | "upcoming" | "archived"
       solution_type: "internal" | "external"
     }
     CompositeTypes: {
@@ -343,6 +406,7 @@ export const Constants = {
   public: {
     Enums: {
       collateral_type: ["video", "deck", "document"],
+      solution_status: ["live", "upcoming", "archived"],
       solution_type: ["internal", "external"],
     },
   },
