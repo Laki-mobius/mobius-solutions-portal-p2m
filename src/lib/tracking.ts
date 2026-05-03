@@ -5,7 +5,8 @@ export type ActivityAction =
   | "view_solution"
   | "view_collateral"
   | "play_video"
-  | "download_collateral";
+  | "download_collateral"
+  | "reveal_credentials";
 
 export async function recordSession(email: string) {
   const session_id = getSessionId();

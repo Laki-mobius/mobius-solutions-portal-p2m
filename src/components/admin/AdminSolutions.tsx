@@ -20,11 +20,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { FileOrUrlInput } from "./FileOrUrlInput";
 
-type Form = Omit<Solution, "id" | "created_at"> & { id?: string };
+type Form = {
+  id?: string;
+  title: string;
+  description: string;
+  icon_url: string;
+  thumbnail_url: string;
+  target_url: string;
+  solution_type: "internal" | "external";
+  status: "live" | "upcoming" | "archived";
+  upcoming_eta: string;
+  default_username: string;
+  default_password: string; // plaintext input only
+  credentials_note: string;
+  has_password: boolean;
+  clear_password: boolean;
+};
 
 const empty: Form = {
   title: "",
@@ -33,19 +48,28 @@ const empty: Form = {
   thumbnail_url: "",
   target_url: "",
   solution_type: "internal",
+  status: "live",
+  upcoming_eta: "",
+  default_username: "",
+  default_password: "",
+  credentials_note: "",
+  has_password: false,
+  clear_password: false,
 };
+
+type AdminRow = Solution & { default_password_encrypted?: string | null };
 
 export const AdminSolutions = () => {
   const qc = useQueryClient();
   const { data = [], isLoading } = useQuery({
     queryKey: ["admin", "solutions"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("solutions")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Solution[];
+      return data as AdminRow[];
     },
   });
 
@@ -62,17 +86,30 @@ export const AdminSolutions = () => {
       return;
     }
     const payload = {
-      title: form.title.trim(),
-      description: form.description ?? "",
-      icon_url: form.icon_url || null,
-      thumbnail_url: form.thumbnail_url || null,
-      target_url: form.target_url.trim(),
-      solution_type: form.solution_type,
+      op: "upsert" as const,
+      id: form.id,
+      data: {
+        title: form.title.trim(),
+        description: form.description ?? "",
+        icon_url: form.icon_url || null,
+        thumbnail_url: form.thumbnail_url || null,
+        target_url: form.target_url.trim(),
+        solution_type: form.solution_type,
+        status: form.status,
+        upcoming_eta: form.status === "upcoming" && form.upcoming_eta ? form.upcoming_eta : null,
+        default_username: form.default_username.trim() || null,
+        default_password: form.default_password || null,
+        credentials_note: form.credentials_note.trim() || null,
+        clear_password: form.clear_password,
+      },
     };
-    const { error } = form.id
-      ? await supabase.from("solutions").update(payload).eq("id", form.id)
-      : await supabase.from("solutions").insert(payload);
-    if (error) return toast.error(error.message);
+    const { data: res, error } = await supabase.functions.invoke("manage-solution", {
+      body: payload,
+    });
+    if (error || (res as any)?.error) {
+      toast.error(error?.message || (res as any)?.error || "Save failed");
+      return;
+    }
     toast.success(form.id ? "Solution updated" : "Solution created");
     qc.invalidateQueries({ queryKey: ["admin", "solutions"] });
     qc.invalidateQueries({ queryKey: ["solutions"] });
@@ -81,11 +118,36 @@ export const AdminSolutions = () => {
 
   const remove = async (id: string) => {
     if (!confirm("Delete this solution?")) return;
-    const { error } = await supabase.from("solutions").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    const { data: res, error } = await supabase.functions.invoke("manage-solution", {
+      body: { op: "delete", id },
+    });
+    if (error || (res as any)?.error) {
+      toast.error(error?.message || (res as any)?.error || "Delete failed");
+      return;
+    }
     toast.success("Deleted");
     qc.invalidateQueries({ queryKey: ["admin", "solutions"] });
     qc.invalidateQueries({ queryKey: ["solutions"] });
+  };
+
+  const editRow = (s: AdminRow) => {
+    setForm({
+      id: s.id,
+      title: s.title,
+      description: s.description ?? "",
+      icon_url: s.icon_url ?? "",
+      thumbnail_url: s.thumbnail_url ?? "",
+      target_url: s.target_url,
+      solution_type: s.solution_type,
+      status: (s.status as Form["status"]) ?? "live",
+      upcoming_eta: s.upcoming_eta ?? "",
+      default_username: s.default_username ?? "",
+      default_password: "",
+      credentials_note: s.credentials_note ?? "",
+      has_password: !!s.default_password_encrypted,
+      clear_password: false,
+    });
+    setOpen(true);
   };
 
   return (
@@ -107,6 +169,8 @@ export const AdminSolutions = () => {
             <tr>
               <th className="p-3 text-left">Title</th>
               <th className="p-3 text-left">Type</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Creds</th>
               <th className="p-3 text-left">Target</th>
               <th className="p-3" />
             </tr>
@@ -114,13 +178,13 @@ export const AdminSolutions = () => {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   Loading…
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   No solutions yet.
                 </td>
               </tr>
@@ -129,16 +193,19 @@ export const AdminSolutions = () => {
                 <tr key={s.id} className="border-t border-border">
                   <td className="p-3 font-medium">{s.title}</td>
                   <td className="p-3 capitalize">{s.solution_type}</td>
+                  <td className="p-3 capitalize">{s.status}</td>
+                  <td className="p-3">
+                    {s.default_password_encrypted ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                        <KeyRound className="h-3 w-3" /> set
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="max-w-xs truncate p-3 text-muted-foreground">{s.target_url}</td>
                   <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setForm({ ...s, description: s.description ?? "", icon_url: s.icon_url ?? "", thumbnail_url: s.thumbnail_url ?? "" });
-                        setOpen(true);
-                      }}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => editRow(s)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => remove(s.id)}>
@@ -170,23 +237,51 @@ export const AdminSolutions = () => {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Select
-                value={form.solution_type}
-                onValueChange={(v) =>
-                  setForm({ ...form, solution_type: v as "internal" | "external" })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="internal">Internal</SelectItem>
-                  <SelectItem value="external">External</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select
+                  value={form.solution_type}
+                  onValueChange={(v) =>
+                    setForm({ ...form, solution_type: v as "internal" | "external" })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="external">External</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => setForm({ ...form, status: v as Form["status"] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="live">Live</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            {form.status === "upcoming" && (
+              <div className="space-y-2">
+                <Label>Expected date (optional)</Label>
+                <Input
+                  type="date"
+                  value={form.upcoming_eta}
+                  onChange={(e) => setForm({ ...form, upcoming_eta: e.target.value })}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Target URL</Label>
               <Input
@@ -195,6 +290,64 @@ export const AdminSolutions = () => {
                 placeholder="https://…"
               />
             </div>
+
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <KeyRound className="h-4 w-4" /> Default credentials (optional)
+              </div>
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <Input
+                  value={form.default_username}
+                  onChange={(e) => setForm({ ...form, default_username: e.target.value })}
+                  placeholder="demo@example.com"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  Password{" "}
+                  {form.has_password && !form.clear_password && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      •••••• (set — leave blank to keep, or type new to replace)
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="password"
+                  value={form.default_password}
+                  onChange={(e) =>
+                    setForm({ ...form, default_password: e.target.value, clear_password: false })
+                  }
+                  placeholder={form.has_password ? "Type new password to replace" : "Password"}
+                  autoComplete="new-password"
+                />
+                {form.has_password && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({ ...form, clear_password: !form.clear_password, default_password: "" })
+                    }
+                    className="text-xs text-destructive underline"
+                  >
+                    {form.clear_password ? "Cancel removal" : "Remove saved password"}
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Note (optional)</Label>
+                <Textarea
+                  rows={2}
+                  value={form.credentials_note}
+                  onChange={(e) => setForm({ ...form, credentials_note: e.target.value })}
+                  placeholder="e.g. Use SSO if your @company.com email is enrolled."
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Passwords are encrypted at rest and only revealed to users after the email gate.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label>Icon</Label>
               <FileOrUrlInput
