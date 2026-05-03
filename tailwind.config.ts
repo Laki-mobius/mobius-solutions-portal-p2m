@@ -73,12 +73,6 @@ export default {
         "type-deck": "hsl(var(--type-deck))",
         "type-document": "hsl(var(--type-document))",
       },
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
-      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
