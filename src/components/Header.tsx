@@ -1,6 +1,5 @@
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { MobiusLogo } from "@/components/MobiusMark";
 import { Button } from "@/components/ui/button";
 import { Search, Menu, X, LogOut } from "lucide-react";
 import { clearStoredEmail, getStoredEmail } from "@/lib/email-gate";
