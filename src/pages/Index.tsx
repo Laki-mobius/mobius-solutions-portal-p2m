@@ -27,7 +27,7 @@ const Index = () => {
           <div className="mx-auto max-w-3xl text-center">
             <span className="glass mb-6 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-primary">
               <Sparkles className="h-3.5 w-3.5" />
-              Mobius Solutions Showcase
+              Mobius Solutions Portal
             </span>
             <h1 className="font-display text-4xl font-bold leading-tight tracking-tight md:text-6xl">
               Solutions, <span className="text-gradient-brand">crafted</span> by Mobius.
