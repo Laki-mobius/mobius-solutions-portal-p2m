@@ -37,9 +37,7 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between gap-4">
-        <Link to="/" className="shrink-0">
-          <MobiusLogo />
-        </Link>
+        <div className="shrink-0" />
 
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((l) => (
