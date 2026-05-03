@@ -1,4 +1,4 @@
-import { MobiusMark } from "@/components/MobiusMark";
+
 
 export const Footer = () => (
   <footer className="border-t border-border/60 bg-background">
