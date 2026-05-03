@@ -7,7 +7,7 @@ export const Footer = () => (
         <MobiusMark size={28} />
         <div>
           <p className="font-display text-sm font-semibold">Mobius Knowledge Services</p>
-          <p className="text-xs text-muted-foreground">Solutions Showcase Portal</p>
+          <p className="text-xs text-muted-foreground">Solutions Portal</p>
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
