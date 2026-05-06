@@ -11,6 +11,7 @@ type LogRow = {
   action: string;
   target_id: string | null;
   target_type: string | null;
+  target_name: string | null;
   created_at: string;
 };
 
@@ -79,6 +80,7 @@ export const AdminLogs = () => {
               <th className="p-3 text-left">When</th>
               <th className="p-3 text-left">Email</th>
               <th className="p-3 text-left">Action</th>
+              <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Target</th>
               <th className="p-3 text-left">Session</th>
             </tr>
@@ -86,13 +88,13 @@ export const AdminLogs = () => {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   Loading…
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                <td colSpan={6} className="p-6 text-center text-muted-foreground">
                   No activity yet.
                 </td>
               </tr>
@@ -104,6 +106,7 @@ export const AdminLogs = () => {
                   </td>
                   <td className="p-3">{row.email}</td>
                   <td className="p-3 font-mono text-xs">{row.action}</td>
+                  <td className="p-3">{row.target_name ?? "—"}</td>
                   <td className="p-3 font-mono text-xs text-muted-foreground">
                     {row.target_type}:{row.target_id?.slice(0, 8)}
                   </td>
