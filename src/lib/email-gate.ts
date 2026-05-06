@@ -1,6 +1,6 @@
 // Allowed email domains for the Solutions Showcase Portal email gate.
 // Edit this array to add or remove permitted domains.
-export const ALLOWED_EMAIL_DOMAINS = ["mobiusservices.com", "mobius635.com"];
+export const ALLOWED_EMAIL_DOMAINS = ["mobiusservices.com"];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,7 +12,7 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
   if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
     return {
       valid: false,
-      error: `Please use your official ${ALLOWED_EMAIL_DOMAINS.map((d) => "@" + d).join(" or ")} email`,
+      error: `Please use your official @${ALLOWED_EMAIL_DOMAINS[0]} email`,
     };
   }
   return { valid: true };
