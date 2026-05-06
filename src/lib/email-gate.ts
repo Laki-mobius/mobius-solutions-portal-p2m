@@ -12,7 +12,7 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
   if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
     return {
       valid: false,
-      error: `Please use your official @${ALLOWED_EMAIL_DOMAINS[0]} email`,
+      error: `Please use your official ${ALLOWED_EMAIL_DOMAINS.map((d) => "@" + d).join(" or ")} email`,
     };
   }
   return { valid: true };
