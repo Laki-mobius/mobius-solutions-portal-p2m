@@ -1,18 +1,23 @@
-## Plan
+## Goal
+Show the human-readable name of the solution/collateral that was accessed in the Admin → Logs table (and CSV export), instead of only the truncated UUID.
 
-Add `mobius365.com` as an additional permitted domain for the email gate used when users access solutions or collaterals.
+## Changes
 
-### Change
+### 1. `supabase/functions/admin-logs/index.ts`
+- After fetching `activity_logs`, collect distinct `target_id`s grouped by `target_type` (`solution` vs `collateral`).
+- Query `solutions` (id, title) and `collaterals` (id, title) using the service role client to build an id → title map.
+- Attach `target_name` to each log row.
+- Include `target_name` as a new column in both the JSON response and the CSV export (between `target_type` and `created_at`).
 
-**File:** `src/lib/email-gate.ts`
+### 2. `src/components/admin/AdminLogs.tsx`
+- Extend the `LogRow` type with `target_name: string | null`.
+- Add a new "Target Name" column header between "Action" and "Target".
+- Render `row.target_name ?? "—"` in that cell. Keep the existing short id cell for reference (or merge — see option below).
 
-Update the `ALLOWED_EMAIL_DOMAINS` array:
+## Display option
+Render the table as: When | Email | Action | Target Name | Type/ID (small, muted) | Session.
+This keeps full traceability while making logs human-readable.
 
-```ts
-export const ALLOWED_EMAIL_DOMAINS = ["mobiusservices.com", "mobius365.com"];
-```
-
-### Effect
-
-- Users with either `@mobiusservices.com` or `@mobius365.com` emails will pass validation in the EmailGate dialog.
-- The dialog's placeholder and error message continue to reference the first domain (`mobiusservices.com`) as the primary example, which is the existing behavior. No other changes required.
+## Notes
+- Deleted solutions/collaterals will show "—" since the title can't be resolved.
+- No DB schema change needed; logs table stays as-is.
